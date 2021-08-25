@@ -13,3 +13,14 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# VS Code
+.vscode/
+workspace.code-workspace
+
+# Custom
+$Notes/
+dad74988/
+modified/
+
+
