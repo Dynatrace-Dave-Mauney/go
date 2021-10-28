@@ -28,12 +28,120 @@ var dtEnvURL = os.Args[1]
 var apiToken = os.Args[2]
 var subdir = os.Args[3]
 
+var saveEntityEndpoints = []string{
+	"/allowedBeaconOriginsForCors",
+	"/anomalyDetection/applications",
+	"/anomalyDetection/aws",
+	"/anomalyDetection/databaseServices",
+	"/anomalyDetection/hosts",
+	"/anomalyDetection/services",
+	"/anomalyDetection/vmware",
+	"/applicationDetectionRules/hostDetection",
+	"/applications/web/default",
+	"/applications/web/default/dataPrivacy",
+	"/aws/iamExternalId",
+	"/aws/privateLink",
+	"/aws/privateLink/allowlistedAccounts",
+	"/contentResources",
+	"/frequentIssueDetection",
+	"/geographicRegions/ipAddressMappings",
+	"/geographicRegions/ipDetectionHeaders",
+	"/hosts/autoupdate",
+	"/symfiles/dtxdss-download",
+	"/symfiles/info",
+	"/symfiles/ios/supportedversion",
+	"/technologies"}
+
+var saveListEndpoints = []string{
+	"/alertingProfiles",
+	"/anomalyDetection/diskEvents",
+	"/anomalyDetection/metricEvents",
+	"/applicationDetectionRules",
+	"/applications/mobile",
+	"/applications/web",
+	"/applications/web/dataPrivacy",
+	"/autoTags",
+	"/aws/credentials",
+	"/azure/credentials",
+	"/calculatedMetrics/log",
+	"/calculatedMetrics/mobile",
+	"/calculatedMetrics/rum",
+	"/calculatedMetrics/service",
+	"/calculatedMetrics/synthetic",
+	"/credentials",
+	"/cloudFoundry/credentials",
+	"/dashboards",
+	"/dataPrivacy",
+	"/extensions",
+	"/extensions/activeGateExtensionModules",
+	"/kubernetes/credentials",
+	"/maintenanceWindows",
+	"/managementZones",
+	"/notifications",
+	"/plugins",
+	"/plugins/activeGatePluginModules",
+	"/remoteEnvironments",
+	"/reports",
+	"/service/detectionRules/FULL_WEB_REQUEST",
+	"/service/detectionRules/FULL_WEB_SERVICE",
+	"/service/detectionRules/OPAQUE_AND_EXTERNAL_WEB_REQUEST",
+	"/service/detectionRules/OPAQUE_AND_EXTERNAL_WEB_SERVICE",
+	"/service/failureDetection/parameterSelection/parameterSets",
+	"/service/failureDetection/parameterSelection/rules",
+	"/service/ibmMQTracing/imsEntryQueue",
+	"/service/ibmMQTracing/queueManager",
+	"/service/requestAttributes",
+	"/service/requestNaming",
+	"/service/resourceNaming",
+	"/symfiles"}
+
 func main() {
 	fmt.Println("func main")
 
 	fmt.Println("URL:                            ", dtEnvURL)
 	fmt.Println("Token (1st 15 characters only): ", apiToken[:15])
 	fmt.Println("Subdirectory:                   ", subdir)
+
+	fmt.Println("Args Length:                    ", len(os.Args))
+
+	if len(os.Args) == 6 {
+		mode := os.Args[4]
+		endpoints := os.Args[5]
+		if mode == "include" {
+			endpointList := strings.Split(endpoints, ",")
+			for _, endpoint := range endpointList {
+				if contains(saveEntityEndpoints, endpoint) {
+					fmt.Println("including: ", endpoint)
+					saveEntity(endpoint)
+				} else {
+					if contains(saveListEndpoints, endpoint) {
+						fmt.Println("including: ", endpoint)
+						saveList(endpoint)
+					} else {
+						fmt.Println("invalid endpoint: " + endpoint)
+						os.Exit(1)
+					}
+				}
+			}
+		} else if mode == "exclude" {
+			endpointList := strings.Split(endpoints, ",")
+			for _, endpoint := range saveEntityEndpoints {
+				if contains(endpointList, endpoint) {
+					fmt.Println("excluding: ", endpoint)
+				} else {
+					saveEntity(endpoint)
+				}
+			}
+			for _, endpoint := range saveListEndpoints {
+				if contains(endpointList, endpoint) {
+					fmt.Println("excluding: ", endpoint)
+				} else {
+					saveList(endpoint)
+				}
+			}
+		}
+		os.Exit(0)
+	}
 
 	//Generated with C:\Users\Dave.Mauney\PycharmProjects\Automation\DynatraceAPI\APISpecs\dump_spec.py
 	saveEntity("/allowedBeaconOriginsForCors")
@@ -105,10 +213,10 @@ func saveList(entityType string) {
 	fmt.Println("func saveList")
 	entity := callDynatraceAPI(entityType)
 	// fmt.Println(entity)
-	if !strings.Contains(entity, "error") {
+	if !strings.Contains(entity, "\"error\": {") {
 		writeList(entityType, entity)
 	} else {
-		fmt.Println("payload contains 'error'")
+		fmt.Println("payload contains \"error\": {")
 		fmt.Println(entityType)
 		fmt.Println(entity)
 		// os.Exit(0)
@@ -259,4 +367,16 @@ func check(e error) {
 		fmt.Println(e)
 		panic(e)
 	}
+}
+
+// https://play.golang.org/p/Qg_uv_inCek
+// contains checks if a string is present in a slice
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
 }
